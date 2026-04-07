@@ -1,7 +1,7 @@
 import cv2
 
 class Camera:
-    def __init__(self, index=1):
+    def __init__(self, index = 4):
         self.cap = cv2.VideoCapture(index)
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
@@ -19,10 +19,10 @@ if __name__ == '__main__':
     print(f"当前分辨率: {cam.width} × {cam.height}")
 
     while True:
-        ret, frame = cam.read()  # 【修改】在循环内不断读取新帧
+        ret, frame = cam.read()  # 在循环内不断读取新帧
         if ret:
             cv2.imshow('Camera View', frame)
-            # 【关键】添加 waitKey，1ms延迟，按'q'键退出
+            # 按'q'键退出
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
         else:
