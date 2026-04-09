@@ -10,20 +10,32 @@ import time
 from collections import deque
 import Hobot.GPIO as GPIO
 
-cam = camera.Camera(index = 4, width=640, height=480)
+cam = camera.Camera(index = 4, width = 640, height = 480)
+detector = Detector.Detector(min_area = 5000, max_area = 500000)
+tracker = Tracker.Tracker(img_width = 640, img_height = 480, vfov= 48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5)
+stepper_yaw = Stepper.MotorController(port = '' , baudrate = 115200, timeout = 1, motor_id = 1)
+stepper_pitch = Stepper.MotorController(port = '' , baudrate = 115200, timeout = 1, motor_id = 1)
+heart_beat = GPIN(pin = , mode = 1)
+task_info = GPIN(pin = , mode = 1)
+lazer = GPIN(pin = , mode = 1)
+task_switch = GPIN(pin = , mode = 0)
 
-# 用于记录上一次的阈值，实现去重打印
-last_thresh = -1
 
 def nothing(x):
     pass
 
+#初始化 OpenCV 调试界面
 def init_board():
     """初始化调试窗口和滑动条"""
-    cv2.namedWindow('Controls', cv2.WINDOW_NORMAL)
-    cv2.resizeWindow('Controls', 300, 150)
-    cv2.namedWindow('Result', cv2.WINDOW_FREERATIO)
-    cv2.namedWindow('Mask', cv2.WINDOW_FREERATIO)
+    cv2.namedWindow('Controls', cv2.WINDOW_NORMAL)               #创建参数控制面板窗口
+    cv2.namedWindow('Result', cv2.WINDOW_FREERATIO)              #创建名为 Result 的显示窗口，允许自由拉伸     
+    cv2.namedWindow('Mask', cv2.WINDOW_FREERATIO)                #显示二值化
+    cv2.moveWindow('Mask', 360, 180)                             #将 Mask 窗口移至屏幕坐标 (x=360, y=180)
+    cv2.moveWindow('Result', 540, 180)
+    cv2.moveWindow('Controls', 0, 0)                           
+    cv2.resizeWindow('Mask', 170, 150)                           #设置 Mask 窗口固定尺寸为 170×150 像素
+    cv2.resizeWindow('Result', 170, 150)                   
+    cv2.resizeWindow('Controls', 320, 500)
     cv2.createTrackbar('Threshold', 'Controls', 127, 255, nothing)
 
 def update_params():
