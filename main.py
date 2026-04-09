@@ -10,7 +10,7 @@ import time
 from collections import deque
 import Hobot.GPIO as GPIO
 
-
+cam = camera.Camera(index = 4, width=640, height=480)
 
 # 用于记录上一次的阈值，实现去重打印
 last_thresh = -1
