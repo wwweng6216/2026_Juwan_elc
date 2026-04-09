@@ -1,10 +1,16 @@
 import cv2
+import model.cam as camera
+import model.detector as Detector
+import model.tracker as Tracker
+import model.stepper as Stepper
+from model.status import GPIN
+import queue
+import threading
 import time
-from models.detector import Detector
-from models.tracker import Tracker
-detector = Detector(min_area=5000, max_area=500000)
-tracker = Tracker(f_pixel_h=725.6, real_height=17.5)
-camera_index = 0    # 相机索引
+from collections import deque
+import Hobot.GPIO as GPIO
+
+
 
 # 用于记录上一次的阈值，实现去重打印
 last_thresh = -1

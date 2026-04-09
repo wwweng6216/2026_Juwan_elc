@@ -2,17 +2,17 @@ import cv2
 
 class Camera:
     def __init__(self, index = 4):
-        self.cap = cv2.VideoCapture(index)
-        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-        self.cap.set(cv2.CAP_PROP_FPS, 30)
+        self.cam = cv2.VideoCapture(index)
+        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cam.set(cv2.CAP_PROP_FPS, 30)
         
         # 获取实际生效的画面宽度与高度
-        self.width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        self.height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
+        self.height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     def read(self):
-        return self.cap.read()
+        return self.cam.read()
     
 if __name__ == '__main__':
     cam = Camera()
@@ -30,5 +30,5 @@ if __name__ == '__main__':
             break
     
     # 释放资源
-    cam.cap.release()
+    cam.cam.release()
     cv2.destroyAllWindows()
