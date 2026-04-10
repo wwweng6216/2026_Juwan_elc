@@ -8,8 +8,17 @@ import queue
 import threading
 import time
 from collections import deque
-# import Hobot.GPIO as GPIO
 
+control_params = {
+    'yaw_kp': 0.05,
+    'pitch_kp': 0.06,
+    'vel_rpm': 5000,
+    'acc': 255,
+    'cx_offset': 30,
+    'cy_offset': 30
+}
+
+# import Hobot.GPIO as GPIO
 cam = camera.Camera(index = 4, width = 640, height = 480)
 detector = Detector.Detector(min_area = 5000, max_area = 500000)
 tracker = Tracker.Tracker(img_width = 640, img_height = 480, vfov= 48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5)
@@ -54,8 +63,6 @@ def init_board():
 
 # 更新
 def update_hsv():
-    threshold = cv2.getTrackbarPos('Threshold', 'Controls')
-    detector.threshold_value = threshold
     # # 读取 HSV
     # h_min = cv2.getTrackbarPos('H Min', 'Controls')#cv2.getTrackbarPos()：实时读取指定滑动条的当前值
     # h_max = cv2.getTrackbarPos('H Max', 'Controls')
@@ -91,6 +98,11 @@ def update_hsv():
     # tracker.offset_pitch = offset_pitch - 10
     # tracker.shoot_tol = shoot_tol
 
+    control_params['yaw_kp'] = yaw_kp / 100.0
+    control_params['pitch_kp'] = pitch_kp / 100.0
+    control_params['vel_rpm'] = vel_rpm
+    control_params['acc'] = acc
+
     return yaw_kp / 100.0, pitch_kp / 100.0, vel_rpm, acc
 
 '''
@@ -102,50 +114,63 @@ while running.is_set():
         # 异常处理逻辑
         ...
 '''
-def tracking_and_steering_thread(tracker, target_yaw, target_pitch, position_queue, running):
-    """跟踪和转向线程，使用 kp 倍率控制"""
+def tracking_and_steering_thread(tracker, motor_yaw, motor_pitch, position_queue, running, control_params):
+    """跟踪和转向线程"""
     while running.is_set():
         try:
-            #获取最新目标
-            target_yaw, target_pitch = 0, 0
+            current_target_yaw = 0
+            current_target_pitch = 0
 
-            # 2. 获取新帧并解算
             if not position_queue.empty():
                 board = position_queue.get()
                 result = tracker.solve(board)
 
                 if result is not None:
-                    target_yaw, target_pitch, dist = result
+                    current_target_yaw, current_target_pitch, dist = result
                     tracker.if_lost = False
                 else:
                     tracker.if_lost = True
 
-            # 3. 统一执行控制
-            if tracker.if_lost == True:
+            if tracker.if_lost:
                 try:
-                    stepper_yaw.emm_v5_move_to_angle(angle_deg=3, vel_rpm=2000, acc=0, abs_mode=False)
+                    motor_yaw.emm_v5_move_to_angle(angle_deg=3, vel_rpm=2000, acc=0, abs_mode=False)
                 except Exception as e:
                     print(f"Yaw 电机错误: {str(e)}")
             else:
-                yaw_kp, pitch_kp, vel_rpm, acc = update_hsv()
-                if abs(target_yaw) > detector.cx_offset:
+                # ✅ 不再调用 update_hsv()，而是读取共享字典
+                yaw_kp = control_params.get('yaw_kp', 0.05)
+                pitch_kp = control_params.get('pitch_kp', 0.06)
+                vel_rpm = control_params.get('vel_rpm', 5000)
+                acc = control_params.get('acc', 255)
+                cx_offset = control_params.get('cx_offset', 30)
+                cy_offset = control_params.get('cy_offset', 30)
+                
+                if abs(current_target_yaw) > cx_offset:
                     try:
-                        stepper_yaw.emm_v5_move_to_angle(angle_deg=target_yaw * yaw_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
+                        motor_yaw.emm_v5_move_to_angle(
+                            angle_deg=current_target_yaw * yaw_kp, 
+                            vel_rpm=vel_rpm, 
+                            acc=acc, 
+                            abs_mode=False
+                        )
                     except Exception as e:
                         print(f"Yaw 电机错误: {str(e)}")
-                if abs(target_pitch) > detector.cy_offset:
+                        
+                if abs(current_target_pitch) > cy_offset:
                     try:
-                        stepper_pitch.emm_v5_move_to_angle(angle_deg=target_pitch * pitch_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
+                        motor_pitch.emm_v5_move_to_angle(
+                            angle_deg=current_target_pitch * pitch_kp, 
+                            vel_rpm=vel_rpm, 
+                            acc=acc, 
+                            abs_mode=False
+                        )
                     except Exception as e:
                         print(f"Pitch 电机错误: {str(e)}")
-
-                        
 
         except Exception as e:
             print(f"跟踪线程错误: {str(e)}")
 
-        # 移除 time.sleep 以提高频率
-        time.sleep(0.000001)  # 可选：如果 CPU 使用率过高，可尝试 0.1ms
+        time.sleep(0.000001)
 
 def decision(running, detector, tracker):
     """决策线程，用于处理心跳、任务信息显示和任务切换"""
@@ -182,8 +207,10 @@ def main():
     running = threading.Event()
     running.set()
 
-    tracking_thread = threading.Thread(target=tracking_and_steering_thread, 
-                                     args=(tracker, stepper_yaw, stepper_pitch, position_queue, running))
+    tracking_thread = threading.Thread(
+        target=tracking_and_steering_thread, 
+        args=(tracker, stepper_yaw, stepper_pitch, position_queue, running, control_params)
+    )
     tracking_thread.daemon = True
     tracking_thread.start()
 
