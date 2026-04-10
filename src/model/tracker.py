@@ -10,7 +10,8 @@ class Tracker:
         self.img_height = img_height
         self.vfov = vfov # 相机垂直视场角 
         self.hfov = hfov # 相机水平视场角 
-
+        self.if_lost = True
+        self.shoot = False
         # 物理偏移补偿 (单位: cm)
         # 未装激光笔，先忽略视差 
         # 如果以后激光笔装在相机左边 3cm, 就写 np.array([-3.0, 0, 0])
