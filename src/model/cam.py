@@ -3,8 +3,8 @@ import cv2
 class Camera:
     def __init__(self, index = 4, width=640, height=480):
         self.cam = cv2.VideoCapture(index)
-        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, width)
+        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
         self.cam.set(cv2.CAP_PROP_FPS, 30)
         
         # 获取实际生效的画面宽度与高度
