@@ -1,2 +1,4 @@
+import serial
+import enum
 import time
-from gpiozero import StepperMotor
+import struct
