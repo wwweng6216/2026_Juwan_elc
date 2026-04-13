@@ -157,7 +157,97 @@ class EmmMotor:
         ])
         self._send_cmd(cmd)
 
-    def emm_v5_en_control(self, addr=None):
-        '''使能/去使能'''
+    def emm_v5_en_control(self, addr=None, state = False, snF = False):
+        '''
+        使能信号控制
+        param state: True为使能(通电有力), False为去使能(断电无力)
+        param snF: True为同步触发模式, False为立即执行
+        '''
         addr = self.motor_id if addr is None else addr
+
+        cmd = bytes([
+            addr,
+            0xF3,
+            0xAB,
+            0x01 if state else 0x00,  # 使能位：1=开, 0=关
+            0x01 if snF else 0x00,    # 同步位：1=同步, 0=立即
+            0x6B
+        ])
+        self._send_cmd(cmd)
+
+    def emm_v5_modify_ctrl_mode(self, addr = None, svF = False, ctrl_mode = 0):
+        '''
+        修改开环/闭环控制模式
+        param svF: True表示将设置保存到Flash(断电不丢失), False仅本次生效
+        '''
+        addr = self.motor_id if addr is None else addr
+        cmd = bytes([
+            addr,
+            0x46,
+            0x01 if svF else 0x00,
+            ctrl_mode,
+            0x6B
+        ])
+        self._send_cmd(cmd)
+
+    def emm_v5_vel_control(self, addr = None,dir=0, vel=0, acc=0, snF=False):
+        '''
+        速度模式控制
+        param dir: 方向 (0=正转, 1=反转)
+        param vel: 速度值 (0-65535)，单位通常是 RPM 或内部单位
+        param acc: 加速度 (0-255)
+        param snF: 同步标志
+        '''
+        # 速度 vel 是 16位整数，需要拆成两个 8位字节
+        vel_high = (vel >> 8) & 0xFF  # 高8位
+        vel_low = vel & 0xFF          # 低8位
+        addr = self.motor_id if addr is None else addr
+        cmd = bytes([
+            addr,
+            0xF6, 
+            dir & 0xFF,
+            vel_high,
+            vel_low,
+            acc & 0xFF,
+            0x01 if snF else 0x00, 
+            0x6B
+        ])
+        self._send_cmd(cmd)
+
+    def emm_v5_pos_control(self, addr = None, snF = False, raF=False, dir=0, vel=0, acc=0, clk=0):        
+        '''
+        位置控制模式
+        协议格式
+        [地址, 0xFD, dir, vel_h, vel_l, acc, clk_3, clk_2, clk_1, clk_0, raF, snF, 0x6B]
+        param clk: 目标脉冲数/位置值 (32位整数)
+        param raF: True=绝对位置, False=相对位置
+        '''
+        vel_high = (vel >> 8) & 0xFF  # 高8位
+        vel_low = vel & 0xFF          # 低8位
+        # 位置（脉冲数）是一个 32位整数 (int32)，所以需要拆成 4个字节
+        clk_3 = (clk >> 24) & 0xFF  # 最高8位
+        clk_2 = (clk >> 16) & 0xFF
+        clk_1 = (clk >> 8) & 0xFF
+        clk_0 = clk & 0xFF          # 最低8位
+        addr = self.motor_id if addr is None else addr
+        cmd = bytes([
+            addr,
+            0xFD,
+            vel_high, 
+            vel_low, 
+            acc, 
+            clk_3, 
+            clk_2, 
+            clk_1, 
+            clk_0, 
+            raF, 
+            snF, 
+            0x6B
+        ])
+        self._send_cmd(cmd)
+
+    def emm_v5_origin_trigger_return(self, addr = None, ):
+        
+
+
 
