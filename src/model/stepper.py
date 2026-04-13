@@ -246,8 +246,90 @@ class EmmMotor:
         ])
         self._send_cmd(cmd)
 
-    def emm_v5_origin_trigger_return(self, addr = None, ):
+    def emm_v5_origin_trigger_return(self, addr = None, o_mode = 0, snF = False):
+        '''
+        回零模式
+        协议格式
+        [地址, 0x9A, o_mode(回零模式), snF(同步), 0x6B]
+        '''
+        addr = self.motor_id if addr is None else addr
+        cmd = ([
+            addr,
+            o_mode & 0xFF,
+            0x01 if snF else 0x00,
+            0x6B
+        ])
+        self._send_cmd(cmd)
+
+    def emm_v5_synchronous_motion(self):
+
+    def get_current_position_angle(self):
+        """
+        读取当前电机位置并转换为角度
+        返回: 角度 (float)
+        """
+        addr = self.motor_id if addr is None else addr
+        #获取原始字节数据,S_CPOS 对应的是当前脉冲位置
+        data = self.emm_v5_read_sys_params(addr, SysParams.S_CPOS)
+
+        #数据校验与解析,协议规定返回至少要有 7 个字节：[Addr, Func, Dir, Pos_3, Pos_2, Pos_1, Pos_0]
+        if not data or len(data) < 7:
+            return None
         
+        # 检查返回的地址和功能码是否正确，防止读到垃圾数据
+        if data[0] != addr or data[1] != 0x36:        # 0x36 是 S_CPOS 的功能码
+            return None
+        
+        #获取旋转方向
+        direction_byte = data[2]
+
+        #获取脉冲数
+        pos_int = struct.unpack('>I', data[3:7])[0] # data[3:7] 取出第4到第7个字节，'>I' 表示大端序无符号整数
+
+        #脉冲数转角度
+        resolution = 65536.0
+        angle = float(pos_int) * 360.0 / resolution
+
+        #处理方向
+        if direction_byte != 0:
+            angle = - angle    # 如果方向位不为0，说明是反转，角度取负
+
+        return angle
+    
+    def emm_v5_move_to_angle(self, addr = None, angle_deg=0.0, vel_rpm=0, acc=0, abs_mode=False):
+        '''
+        按角度移动电机
+        :param angle_deg: 目标角度 (度)，支持负数
+        :param vel_rpm: 运动速度
+        :param acc: 加速度
+        :param abs_mode: True=绝对位置(转到指定刻度), False=相对位置(再转多少度)
+        '''
+        addr = self.motor_id if addr is None else addr
+
+        #处理方向,协议中 dir=0 为正，dir=1 为反,根据角度的正负来决定。
+        dir = 0
+        if angle_deg < 0:
+            dir = 1
+            angle_deg = -angle_deg
+
+        #角度转脉冲数
+        resolution = 65536.0
+        clk = int(angle_deg * resolution / 360.0)
+
+        self.emm_v5_pos_control(
+            self, 
+            addr = addr, 
+            snF = False, 
+            raF=abs_mode, 
+            dir=0, 
+            vel=vel_rpm, 
+            acc=acc, 
+            clk=0
+            )
+    def close(self):
+        """关闭串口"""
+        if self.serial_port and self.serial_port.is_open:
+            self.serial_port.close()
 
 
 
