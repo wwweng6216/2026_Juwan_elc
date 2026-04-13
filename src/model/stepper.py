@@ -74,4 +74,90 @@ class EmmMotor:
         self.serial_port.write(cmd_bytes)
 
     '''实现核心通信协议''' 
+    def emm_v5_read_sys_params(self, addr=None, s: SysParams = None):
+        """
+        读取系统参数
+        参考树莓派例程 Emm_V5_Read_Sys_Params
+        """
+        addr = self.motor_id if addr is None else addr
+        cmd = bytearray()
+        cmd.append(addr)
+        
+        # 功能码映射
+        func_codes = {
+            SysParams.S_VER: 0x1F,
+            SysParams.S_RL: 0x20,
+            SysParams.S_PID: 0x21,
+            SysParams.S_VBUS: 0x24,
+            SysParams.S_CPHA: 0x27,
+            SysParams.S_ENCL: 0x31,
+            SysParams.S_TPOS: 0x33,
+            SysParams.S_VEL: 0x35,
+            SysParams.S_CPOS: 0x36,
+            SysParams.S_PERR: 0x37,
+            SysParams.S_FLAG: 0x3A,
+            SysParams.S_ORG: 0x3B,
+            SysParams.S_Conf: 0x42,
+            SysParams.S_State: 0x43
+        }
+        
+        if s not in func_codes:
+            raise ValueError(f"未知的参数类型: {s}")
+            
+        cmd.append(func_codes[s])
+        
+        # 特殊参数需要辅助码
+        if s == SysParams.S_Conf:
+            cmd.append(0x6C)
+        elif s == SysParams.S_State:
+            cmd.append(0x7A)
+            
+        cmd.append(0x6B) # 校验字节
+        
+        self._send_cmd(bytes(cmd))
+        
+        # 读取响应 (根据参数不同，返回长度可能不同，这里尝试读取一定长度)
+        # 注意：实际项目中需要根据具体协议文档确定返回字节数
+        time.sleep(0.01) # 等待驱动器处理
+        return self.serial_port.read(32)
     
+    def emm_v5_reset_curpos_to_zero(self, addr = None)
+        '''位置清零'''
+        addr = self.motor_id if addr is None else addr
+        cmd = bytes([
+            addr,
+            0x0A, 
+            0x6D,
+            0x6B
+        ])
+        self._send_cmd(cmd)
+    
+    def emm_v5_reset_clog_pro(self, addr=None):
+        '''解除堵转保护'''
+        addr = self.motor_id if addr is None else addr
+
+        #组装命令
+        cmd = bytes([
+            addr,   # 地址
+            0x0E,   # 命令字
+            0x52,   # 数据位
+            0x6B    # 校验/结束符
+        ])
+        self._send_cmd(cmd)
+
+    def emm_v5_stop_now(self, addr=None, snF=False):
+        '''立刻停止'''
+        addr = self.motor_id if addr is None else addr
+
+        cmd = bytes([
+            addr,
+            0xFE,
+            0x01 if snF else 0x00, 
+            0x6B
+        ])
+        self._send_cmd(cmd)
+
+    def emm_v5_en_control(self, addr=None):
+        '''使能/去使能'''
+        addr = self.motor_id if addr is None else addr
+
