@@ -121,7 +121,7 @@ class EmmMotor:
         time.sleep(0.01) # 等待驱动器处理
         return self.serial_port.read(32)
     
-    def emm_v5_reset_curpos_to_zero(self, addr = None)
+    def emm_v5_reset_curpos_to_zero(self, addr = None):
         '''位置清零'''
         addr = self.motor_id if addr is None else addr
         cmd = bytes([
@@ -233,6 +233,7 @@ class EmmMotor:
         cmd = bytes([
             addr,
             0xFD,
+            dir & 0xFF,
             vel_high, 
             vel_low, 
             acc, 
@@ -261,7 +262,7 @@ class EmmMotor:
         ])
         self._send_cmd(cmd)
 
-    def emm_v5_synchronous_motion(self):
+    #def emm_v5_synchronous_motion(self):
 
     def get_current_position_angle(self):
         """
