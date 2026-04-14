@@ -330,6 +330,3 @@ class EmmMotor:
         """关闭串口"""
         if self.serial_port and self.serial_port.is_open:
             self.serial_port.close()
-
-
-
