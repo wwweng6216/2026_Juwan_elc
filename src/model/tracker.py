@@ -40,8 +40,8 @@ class Tracker:
 
         # 计算云台角度
         # Yaw: 逆时针为正 
-        yaw = -math.degrees(math.atan2(dx, dz))
+        yaw = math.degrees(math.atan2(dx, dz))
         # Pitch: 向下为正
-        pitch = math.degrees(math.atan2(dy, dz))
+        pitch = -math.degrees(math.atan2(dy, dz))
 
         return yaw, pitch, dist

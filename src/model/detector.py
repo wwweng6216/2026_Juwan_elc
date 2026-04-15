@@ -24,7 +24,12 @@ class Detector:
         # 转灰度
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)     
         # 反二值化 
-        _, binary = cv2.threshold(gray, self.threshold_value, 255, cv2.THRESH_BINARY_INV)        
+        # _, binary = cv2.threshold(gray, self.threshold_value, 255, cv2.THRESH_BINARY_INV)
+
+        # Otsu + 反二值化
+        ret, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+        print(f"Otsu 自动计算的阈值: {ret}")        
         # 新增：存储当前帧的二值化结果，供 main.py 显示
         self.last_binary = binary       # 存储当前帧的二值化结果
         # 核心检测逻辑
