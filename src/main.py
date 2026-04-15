@@ -86,8 +86,8 @@ def main ():
                     cv2.putText(annotated_frame, info, (10, 70), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
                     
-                    # 死区判断+运行电机
-                    if abs(yaw) > 0.5:
+                    # 运行电机
+                    if abs(yaw) > 0:
                         try:
                             print(f"yaw: {yaw}")
                             stepper_yaw.emm_v5_move_to_angle(
@@ -95,7 +95,7 @@ def main ():
                         except Exception as e:
                             print(f" Yaw 电机指令异常: {e}")
                             
-                    if abs(pitch) > 0.5:
+                    if abs(pitch) > 0:
                         try:
                             print(f"pitch: {pitch}")
                             stepper_pitch.emm_v5_move_to_angle(
