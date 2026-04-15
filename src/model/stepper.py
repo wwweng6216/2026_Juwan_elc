@@ -264,7 +264,7 @@ class EmmMotor:
 
     #def emm_v5_synchronous_motion(self):
 
-    def get_current_position_angle(self):
+    def get_current_position_angle(self, addr=None):
         """
         读取当前电机位置并转换为角度
         返回: 角度 (float)
@@ -317,8 +317,7 @@ class EmmMotor:
         resolution = 65536.0
         clk = int(angle_deg * resolution / 360.0)
 
-        self.emm_v5_pos_control(
-            self, 
+        self.emm_v5_pos_control( 
             addr = addr, 
             snF = False, 
             raF=abs_mode, 

@@ -28,9 +28,9 @@ def init_board():
 def update_hsv():
     #读原始值
     current_thresh = cv2.getTrackbarPos('Threshold', 'Controls')
-    yaw_kp = cv2.getTrackbarPos('yaw_kp', 'Controls')
+    yaw_kp = cv2.getTrackbarPos('yaw_kp', 'Controls')/ 100.0     #"/ 100.0"是数据转换
     pitch_kp = cv2.getTrackbarPos('pitch_kp', 'Controls') / 100.0   #"/ 100.0"是数据转换
-    vel_rpm = cv2.getTrackbarPos('vel_rpm', 'Controls') / 100.0     #"/ 100.0"是数据转换
+    vel_rpm = cv2.getTrackbarPos('vel_rpm', 'Controls')
     acc = cv2.getTrackbarPos('acc', 'Controls')
     #数据处理还要写一个零点偏移
     
@@ -52,8 +52,8 @@ tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, 
 stepper_yaw = Stepper.EmmMotor(port ='COM1', baudrate = 115200, timeout = 1, motor_id = 1)
 stepper_pitch = Stepper.EmmMotor(port ='COM2', baudrate = 115200, timeout = 1, motor_id = 2)
 
-def main (self):
-    #init_board()
+def main ():
+    init_board()
     if not cam.cam.isOpened():
         print("摄像头打不开")
         return
