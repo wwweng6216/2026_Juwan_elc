@@ -124,6 +124,6 @@ def main ():
         cv2.destroyAllWindows()
         print(" 系统已安全关闭")
 
-#
+
 if __name__ == "__main__":
     main()
