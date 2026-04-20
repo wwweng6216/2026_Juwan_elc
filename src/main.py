@@ -5,6 +5,18 @@ import model.tracker as Tracker
 import time
 import cv2
 
+#硬件全局实例化
+'''
+要实例的有
+cam ,detector, tracker, stepper_yaw, stepper_pitch
+顺序逻辑：数据源(摄像头) → 处理源(识别) → 决策源(跟踪) → 执行器(电机控制)
+'''
+cam = Camera.Camera(index = 4, width=640, height=480)
+detector = Detector.Detector(min_area=5000, max_area=500000)
+tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5)
+stepper_yaw = Stepper.EmmMotor(port ='COM20', baudrate = 115200, timeout = 1, motor_id = 1)
+stepper_pitch = Stepper.EmmMotor(port ='COM7', baudrate = 115200, timeout = 1, motor_id = 2)
+
 def nothing(x):
     pass
 #UI
@@ -39,18 +51,6 @@ def update_hsv():
 
     #返回控制参
     return yaw_kp, pitch_kp, vel_rpm, acc
-
-#硬件全局实例化
-'''
-要实例的有
-cam ,detector, tracker, stepper_yaw, stepper_pitch
-顺序逻辑：数据源(摄像头) → 处理源(识别) → 决策源(跟踪) → 执行器(电机控制)
-'''
-cam = Camera.Camera(index = 4, width=640, height=480)
-detector = Detector.Detector(min_area=5000, max_area=500000)
-tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5)
-stepper_yaw = Stepper.EmmMotor(port ='COM20', baudrate = 115200, timeout = 1, motor_id = 1)
-stepper_pitch = Stepper.EmmMotor(port ='COM7', baudrate = 115200, timeout = 1, motor_id = 2)
 
 def main ():
     init_board()
