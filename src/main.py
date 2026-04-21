@@ -82,7 +82,9 @@ def main ():
             #识别目标
             annotated_frame, board = detector.process_image(frame)
 
-            # 控制电机
+            '''
+            控制电机
+            '''
             res = tracker.track(board)
             yaw, pitch, dist, status, laser_pos = res
             info =  f"Status:{status.name} Yaw:{yaw:.2f} P:{pitch:.2f} D:{dist:.1f}"
@@ -91,7 +93,7 @@ def main ():
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
                     
             # 运行电机
-            if status in (Tracker.Status.TRACK, Tracker.Status.TMP_LOST):
+            if status in (Tracker.Status.TRACK, Tracker.Status.TMP_LOST):#能识别+预测
                 try:
                     print(f"yaw: {yaw}")
                     stepper_yaw.emm_v5_move_to_angle(
@@ -105,7 +107,8 @@ def main ():
                         angle_deg=pitch * pitch_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
                 except Exception as e:
                     print(f" pitch 电机指令异常: {e}")
-            elif status == Tracker.Status.LOST:
+                    
+            elif status == Tracker.Status.LOST:#丢帧超多阈值，停止运动
                 pass
 
                     
