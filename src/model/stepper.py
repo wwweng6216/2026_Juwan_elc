@@ -319,7 +319,6 @@ class EmmMotor:
             angle_deg = -angle_deg  # 取绝对值进行计算
             
         # 3. 数学转换：角度 -> 脉冲数 (clk)
-        # 假设分辨率是 65536 脉冲/圈
         resolution = 65536.0
         clk = int(angle_deg * resolution / 360.0)
         

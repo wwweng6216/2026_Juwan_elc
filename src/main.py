@@ -4,11 +4,13 @@ import model.stepper as Stepper
 import model.tracker as Tracker
 import time
 import cv2
+import Hobot.GPIO as GPIO
+import model.status as GPIN
 
 #硬件全局实例化
 '''
 要实例的有
-cam ,detector, tracker, stepper_yaw, stepper_pitch
+cam ,detector, tracker, stepper_yaw, stepper_pitch, 需要的GPIO
 顺序逻辑：数据源(摄像头) → 处理源(识别) → 决策源(跟踪) → 执行器(电机控制)
 '''
 cam = Camera.Camera(index = 4, width=640, height=480)
@@ -16,6 +18,7 @@ detector = Detector.Detector(min_area=5000, max_area=500000)
 tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5)
 stepper_yaw = Stepper.EmmMotor(port ='COM20', baudrate = 115200, timeout = 1, motor_id = 1)
 stepper_pitch = Stepper.EmmMotor(port ='COM7', baudrate = 115200, timeout = 1, motor_id = 2)
+heart_beat = GPIN.GPIN(pin=13, mode=1) #呼吸灯，用于表示主程序还在跑
 
 def nothing(x):
     pass
@@ -62,6 +65,8 @@ def main ():
 
     try:
         while True:
+            #呼吸灯，证明主程序在运行(单线程中闪烁频率完全受制于主循环的运行速度)
+            heart_beat.flash()
             '''
             读帧-更新参数-识别目标-计算角度-控制电机-显示画面-延时与退出
             '''
