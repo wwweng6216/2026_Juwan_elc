@@ -15,7 +15,7 @@ cam ,detector, tracker, stepper_yaw, stepper_pitch, 需要的GPIO
 '''
 cam = Camera.Camera(index = 4, width=640, height=480)
 detector = Detector.Detector(min_area=5000, max_area=500000)
-tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5)
+tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5, use_kf = False)
 stepper_yaw = Stepper.EmmMotor(port ='COM20', baudrate = 115200, timeout = 1, motor_id = 1)
 stepper_pitch = Stepper.EmmMotor(port ='COM7', baudrate = 115200, timeout = 1, motor_id = 2)
 heart_beat = GPIN.GPIN(pin=13, mode=1) #呼吸灯，用于表示主程序还在跑
@@ -82,31 +82,32 @@ def main ():
             #识别目标
             annotated_frame, board = detector.process_image(frame)
 
-            #计算角度 & 控制电机
-            if board.is_valid:
-                res = tracker.solve(board)
-                if res:  # 确保 solve 返回了有效结果（如元组）
-                    yaw, pitch, dist = res
-                    info = f"Yaw:{yaw:.2f} Pitch:{pitch:.2f} Dis:{dist:.1f}cm"
-                    cv2.putText(annotated_frame, info, (10, 70), 
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+            # 控制电机
+            res = tracker.track(board)
+            yaw, pitch, dist, status, laser_pos = res
+            info =  f"Status:{status.name} Yaw:{yaw:.2f} P:{pitch:.2f} D:{dist:.1f}"
+            color = (0, 255, 0) if status == Tracker.Status.TRACK else (0, 255, 255) # 绿色正常，黄色预测
+            cv2.putText(annotated_frame, info, (10, 70), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
                     
-                    # 运行电机
-                    if abs(yaw) > 0:
-                        try:
-                            print(f"yaw: {yaw}")
-                            stepper_yaw.emm_v5_move_to_angle(
-                                angle_deg=yaw * yaw_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
-                        except Exception as e:
-                            print(f" Yaw 电机指令异常: {e}")
+            # 运行电机
+            if status in (Tracker.Status.TRACK, Tracker.Status.TMP_LOST):
+                try:
+                    print(f"yaw: {yaw}")
+                    stepper_yaw.emm_v5_move_to_angle(
+                        angle_deg=yaw * yaw_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
+                except Exception as e:
+                    print(f" Yaw 电机指令异常: {e}")
                             
-                    if abs(pitch) > 0:
-                        try:
-                            print(f"pitch: {pitch}")
-                            stepper_pitch.emm_v5_move_to_angle(
-                                angle_deg=pitch * pitch_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
-                        except Exception as e:
-                            print(f" pitch 电机指令异常: {e}")
+                try:
+                    print(f"pitch: {pitch}")
+                    stepper_pitch.emm_v5_move_to_angle(
+                        angle_deg=pitch * pitch_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
+                except Exception as e:
+                    print(f" pitch 电机指令异常: {e}")
+            elif status == Tracker.Status.LOST:
+                pass
+
                     
             # 显示与退出
             cv2.imshow('bin', detector.last_binary)
