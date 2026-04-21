@@ -6,6 +6,7 @@ import time
 import cv2
 import Hobot.GPIO as GPIO
 import model.status as GPIN
+import model.pid as pid
 
 #硬件全局实例化
 '''
@@ -19,6 +20,8 @@ tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, 
 stepper_yaw = Stepper.EmmMotor(port ='COM20', baudrate = 115200, timeout = 1, motor_id = 1)
 stepper_pitch = Stepper.EmmMotor(port ='COM7', baudrate = 115200, timeout = 1, motor_id = 2)
 heart_beat = GPIN.GPIN(pin=13, mode=1) #呼吸灯，用于表示主程序还在跑
+pid_yaw = pid.PIDController(Kp = 5, Ki = 5, Kd = 5, dt = 1/30)
+pid_pitch = pid.PIDController(Kp = 5, Ki = 5, Kd = 5, dt = 1/30)
 
 def nothing(x):
     pass
@@ -107,7 +110,7 @@ def main ():
                         angle_deg=pitch * pitch_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
                 except Exception as e:
                     print(f" pitch 电机指令异常: {e}")
-                    
+
             elif status == Tracker.Status.LOST:#丢帧超多阈值，停止运动
                 pass
 
