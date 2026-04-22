@@ -55,6 +55,12 @@ class PIDController:
         '''
         output = p_out + i_out + d_out
         return output
+    
+    def reset(self):
+        """重置状态"""
+        self.integral = 0.0
+        self.last_error = 0.0
+        self.last_time = time.time()
 
     def set_Kp(self, Kp):
         """动态设置比例增益"""

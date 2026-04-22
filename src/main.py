@@ -4,8 +4,8 @@ import model.stepper as Stepper
 import model.tracker as Tracker
 import time
 import cv2
-import Hobot.GPIO as GPIO
-import model.status as GPIN
+#import Hobot.GPIO as GPIO
+#import model.status as GPIN
 import model.pid as pid
 
 #硬件全局实例化
@@ -19,7 +19,7 @@ detector = Detector.Detector(min_area=5000, max_area=500000)
 tracker = Tracker.Tracker(img_width=640, img_height=480, vfov=48.0, hfov =80.0, f_pixel_h=725.6, real_height=17.5, use_kf = False)
 stepper_yaw = Stepper.EmmMotor(port ='COM20', baudrate = 115200, timeout = 1, motor_id = 1)
 stepper_pitch = Stepper.EmmMotor(port ='COM7', baudrate = 115200, timeout = 1, motor_id = 2)
-heart_beat = GPIN.GPIN(pin=13, mode=1) #呼吸灯，用于表示主程序还在跑
+#heart_beat = GPIN.GPIN(pin=13, mode=1) #呼吸灯，用于表示主程序还在跑
 pid_yaw = pid.PIDController(Kp = 5, Ki = 5, Kd = 5, dt = 1/30)
 pid_pitch = pid.PIDController(Kp = 5, Ki = 5, Kd = 5, dt = 1/30)
 
@@ -37,8 +37,14 @@ def init_board():
     '''
     cv2.createTrackbar('Threshold', 'Controls', 127, 255, nothing)
 
-    cv2.createTrackbar('yaw_kp', 'Controls', 5, 100, nothing)
-    cv2.createTrackbar('pitch_kp', 'Controls', 6, 100, nothing)
+    cv2.createTrackbar('yaw_kp', 'Controls', 2, 100, nothing)   # 范围 0.00 - 1.00
+    cv2.createTrackbar('yaw_ki', 'Controls', 0, 100, nothing)   # 范围 0.000 - 0.100 
+    cv2.createTrackbar('yaw_kd', 'Controls', 1, 100, nothing)  # 范围 0.000 - 0.010
+
+    cv2.createTrackbar('pitch_kp', 'Controls', 2, 100, nothing)   # 范围 0.00 - 1.00
+    cv2.createTrackbar('pitch_ki', 'Controls', 0, 100, nothing)   # 范围 0.000 - 0.100 
+    cv2.createTrackbar('pitch_kd', 'Controls', 1, 100, nothing)  # 范围 0.000 - 0.010
+
     cv2.createTrackbar('vel_rpm', 'Controls', 3000, 5000, nothing)
     cv2.createTrackbar('acc', 'Controls', 100, 255, nothing)
     cv2.createTrackbar('show', 'Controls', 1, 1, nothing)
@@ -46,17 +52,31 @@ def init_board():
 def update_hsv():
     #读原始值
     current_thresh = cv2.getTrackbarPos('Threshold', 'Controls')
-    yaw_kp = cv2.getTrackbarPos('yaw_kp', 'Controls')/ 100.0     #"/ 100.0"是数据转换
-    pitch_kp = cv2.getTrackbarPos('pitch_kp', 'Controls') / 100.0   #"/ 100.0"是数据转换
+
+    yaw_kp = cv2.getTrackbarPos('yaw_kp', 'Controls')/100
+    yaw_ki = cv2.getTrackbarPos('yaw_ki', 'Controls')/10000
+    yaw_kd = cv2.getTrackbarPos('yaw_kd', 'Controls')/10000
+
+    pitch_kp = cv2.getTrackbarPos('pitch_kp', 'Controls')/100
+    pitch_ki = cv2.getTrackbarPos('pitch_ki', 'Controls')/10000
+    pitch_kd = cv2.getTrackbarPos('pitch_kd', 'Controls')/10000
+
     vel_rpm = cv2.getTrackbarPos('vel_rpm', 'Controls')
     acc = cv2.getTrackbarPos('acc', 'Controls')
-    #数据处理还要写一个零点偏移
     
     #赋值给模块
     detector.threshold_value = current_thresh
 
+    pid_yaw.set_Kp(yaw_kp)
+    pid_yaw.set_Ki(yaw_ki)
+    pid_yaw.set_Kd(yaw_kd)
+    
+    pid_pitch.set_Kp(pitch_kp)
+    pid_pitch.set_Ki(pitch_ki)
+    pid_pitch.set_Kd(pitch_kd)
+
     #返回控制参
-    return yaw_kp, pitch_kp, vel_rpm, acc
+    return vel_rpm, acc
 
 def main ():
     init_board()
@@ -69,7 +89,7 @@ def main ():
     try:
         while True:
             #呼吸灯，证明主程序在运行(单线程中闪烁频率完全受制于主循环的运行速度)
-            heart_beat.flash()
+            #heart_beat.flash()
             '''
             读帧-更新参数-识别目标-计算角度-控制电机-显示画面-延时与退出
             '''
@@ -80,7 +100,7 @@ def main ():
                 break
 
             #更新参数
-            yaw_kp, pitch_kp, vel_rpm, acc = update_hsv()
+            vel_rpm, acc = update_hsv()
 
             #识别目标
             annotated_frame, board = detector.process_image(frame)
@@ -99,19 +119,24 @@ def main ():
             if status in (Tracker.Status.TRACK, Tracker.Status.TMP_LOST):#能识别+预测
                 try:
                     print(f"yaw: {yaw}")
+                    correction_yaw = pid_yaw.compute(yaw)#经过pid后的yaw
                     stepper_yaw.emm_v5_move_to_angle(
-                        angle_deg=yaw * yaw_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
+                        angle_deg= -correction_yaw, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
                 except Exception as e:
                     print(f" Yaw 电机指令异常: {e}")
                             
                 try:
                     print(f"pitch: {pitch}")
+                    correction_pitch = pid_pitch.compute(pitch)#经过pid后的pitch
                     stepper_pitch.emm_v5_move_to_angle(
-                        angle_deg=pitch * pitch_kp, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
+                        angle_deg= -correction_pitch, vel_rpm=vel_rpm, acc=acc, abs_mode=False)
                 except Exception as e:
                     print(f" pitch 电机指令异常: {e}")
 
             elif status == Tracker.Status.LOST:#丢帧超多阈值，停止运动
+                #重置pid
+                pid_yaw.reset()
+                pid_pitch.reset()
                 pass
 
                     
